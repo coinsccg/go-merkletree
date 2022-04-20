@@ -54,8 +54,8 @@ func (n *Node) verifyNode() ([]byte, error) {
 		return nil, err
 	}
 
-	res := solsha3.SoliditySHA3(append(leftBytes, rightBytes...))
-	return res, nil
+	hash := solsha3.SoliditySHA3(append(leftBytes, rightBytes...))
+	return hash, nil
 }
 
 //calculateNodeHash is a helper function that calculates the hash of the node.
@@ -63,9 +63,9 @@ func (n *Node) calculateNodeHash() ([]byte, error) {
 	if n.leaf {
 		return n.C.CalculateHash()
 	}
-	res := solsha3.SoliditySHA3(append(n.Left.Hash, n.Right.Hash...))
+	hash := solsha3.SoliditySHA3(append(n.Left.Hash, n.Right.Hash...))
 
-	return res, nil
+	return hash, nil
 }
 
 //NewTree creates a new Merkle Tree using the content cs.
@@ -173,11 +173,11 @@ func buildIntermediate(nl []*Node, t *MerkleTree) (*Node, error) {
 			if len(nl) == 2 {
 				chash = append(nl[right].Hash, nl[left].Hash...)
 			}
-			res := solsha3.SoliditySHA3(chash)
+			hash := solsha3.SoliditySHA3(chash)
 			n = &Node{
 				Left:  nl[left],
 				Right: nl[right],
-				Hash:  res,
+				Hash:  hash,
 				Tree:  t,
 			}
 		}
@@ -265,8 +265,8 @@ func (m *MerkleTree) VerifyContent(content Content) (bool, error) {
 					return false, err
 				}
 
-				res := solsha3.SoliditySHA3(append(leftBytes, rightBytes...))
-				if bytes.Compare(res, currentParent.Hash) != 0 {
+				hash := solsha3.SoliditySHA3(append(leftBytes, rightBytes...))
+				if bytes.Compare(hash, currentParent.Hash) != 0 {
 					return false, nil
 				}
 				currentParent = currentParent.Parent
