@@ -292,5 +292,3 @@ func (m *MerkleTree) String() string {
 	}
 	return s
 }
-
-// ["0x577155bf1ffbee8729184cde115a45049aa6d618ff1863f12b4e94b4e5bf7bbe","0x757c0396dacdb483a3c56e2ab9dd094f05069ce66229803817cb1bc10632b82a"]
