@@ -19,10 +19,6 @@ nlog2(n) steps in the worst case.
 #### Sample
 ![merkletree](merkle.png)
 
-#### Install
-```
-go get github.com/cbergoon/merkletree
-```
 
 #### Example Usage
 Below is an example that makes use of the entire API - its quite small.
