@@ -1,14 +1,13 @@
 // Copyright 2017 Cameron Bergoon
 // Licensed under the MIT License, see LICENCE file for details.
 
-package merkletree
+package main
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"errors"
 	"fmt"
-	"hash"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
 //Content represents the data that is stored and verified by the tree. A type that
@@ -21,10 +20,9 @@ type Content interface {
 //MerkleTree is the container for the tree. It holds a pointer to the root of the tree,
 //a list of pointers to the leaf nodes, and the merkle root.
 type MerkleTree struct {
-	Root         *Node
-	merkleRoot   []byte
-	Leafs        []*Node
-	hashStrategy func() hash.Hash
+	Root       *Node
+	merkleRoot []byte
+	Leafs      []*Node
 }
 
 //Node represents a node, root, or leaf in the tree. It stores pointers to its immediate
@@ -56,12 +54,8 @@ func (n *Node) verifyNode() ([]byte, error) {
 		return nil, err
 	}
 
-	h := n.Tree.hashStrategy()
-	if _, err := h.Write(append(leftBytes, rightBytes...)); err != nil {
-		return nil, err
-	}
-
-	return h.Sum(nil), nil
+	res := solsha3.SoliditySHA3(append(leftBytes, rightBytes...))
+	return res, nil
 }
 
 //calculateNodeHash is a helper function that calculates the hash of the node.
@@ -69,21 +63,14 @@ func (n *Node) calculateNodeHash() ([]byte, error) {
 	if n.leaf {
 		return n.C.CalculateHash()
 	}
+	res := solsha3.SoliditySHA3(append(n.Left.Hash, n.Right.Hash...))
 
-	h := n.Tree.hashStrategy()
-	if _, err := h.Write(append(n.Left.Hash, n.Right.Hash...)); err != nil {
-		return nil, err
-	}
-
-	return h.Sum(nil), nil
+	return res, nil
 }
 
 //NewTree creates a new Merkle Tree using the content cs.
 func NewTree(cs []Content) (*MerkleTree, error) {
-	var defaultHashStrategy = sha256.New
-	t := &MerkleTree{
-		hashStrategy: defaultHashStrategy,
-	}
+	t := &MerkleTree{}
 	root, leafs, err := buildWithContent(cs, t)
 	if err != nil {
 		return nil, err
@@ -97,10 +84,8 @@ func NewTree(cs []Content) (*MerkleTree, error) {
 //NewTreeWithHashStrategy creates a new Merkle Tree using the content cs using the provided hash
 //strategy. Note that the hash type used in the type that implements the Content interface must
 //match the hash type profided to the tree.
-func NewTreeWithHashStrategy(cs []Content, hashStrategy func() hash.Hash) (*MerkleTree, error) {
-	t := &MerkleTree{
-		hashStrategy: hashStrategy,
-	}
+func NewTreeWithHashStrategy(cs []Content) (*MerkleTree, error) {
+	t := &MerkleTree{}
 	root, leafs, err := buildWithContent(cs, t)
 	if err != nil {
 		return nil, err
@@ -123,6 +108,7 @@ func (m *MerkleTree) GetMerklePath(content Content) ([][]byte, []int64, error) {
 			currentParent := current.Parent
 			var merklePath [][]byte
 			var index []int64
+			//merklePath = append(merklePath, currentParent.Left.Hash, currentParent.Right.Hash)
 			for currentParent != nil {
 				if bytes.Equal(currentParent.Left.Hash, current.Hash) {
 					merklePath = append(merklePath, currentParent.Right.Hash)
@@ -161,16 +147,6 @@ func buildWithContent(cs []Content, t *MerkleTree) (*Node, []*Node, error) {
 			Tree: t,
 		})
 	}
-	if len(leafs)%2 == 1 {
-		duplicate := &Node{
-			Hash: leafs[len(leafs)-1].Hash,
-			C:    leafs[len(leafs)-1].C,
-			leaf: true,
-			dup:  true,
-			Tree: t,
-		}
-		leafs = append(leafs, duplicate)
-	}
 	root, err := buildIntermediate(leafs, t)
 	if err != nil {
 		return nil, nil, err
@@ -184,21 +160,28 @@ func buildWithContent(cs []Content, t *MerkleTree) (*Node, []*Node, error) {
 func buildIntermediate(nl []*Node, t *MerkleTree) (*Node, error) {
 	var nodes []*Node
 	for i := 0; i < len(nl); i += 2 {
-		h := t.hashStrategy()
 		var left, right int = i, i + 1
 		if i+1 == len(nl) {
 			right = i
 		}
-		chash := append(nl[left].Hash, nl[right].Hash...)
-		if _, err := h.Write(chash); err != nil {
-			return nil, err
+
+		var n *Node
+		if len(nl)%2 == 1 && i == (len(nl)-1) {
+			n = nl[i]
+		} else {
+			chash := append(nl[left].Hash, nl[right].Hash...)
+			if len(nl) == 2 {
+				chash = append(nl[right].Hash, nl[left].Hash...)
+			}
+			res := solsha3.SoliditySHA3(chash)
+			n = &Node{
+				Left:  nl[left],
+				Right: nl[right],
+				Hash:  res,
+				Tree:  t,
+			}
 		}
-		n := &Node{
-			Left:  nl[left],
-			Right: nl[right],
-			Hash:  h.Sum(nil),
-			Tree:  t,
-		}
+
 		nodes = append(nodes, n)
 		nl[left].Parent = n
 		nl[right].Parent = n
@@ -272,7 +255,6 @@ func (m *MerkleTree) VerifyContent(content Content) (bool, error) {
 		if ok {
 			currentParent := l.Parent
 			for currentParent != nil {
-				h := m.hashStrategy()
 				rightBytes, err := currentParent.Right.calculateNodeHash()
 				if err != nil {
 					return false, err
@@ -283,10 +265,8 @@ func (m *MerkleTree) VerifyContent(content Content) (bool, error) {
 					return false, err
 				}
 
-				if _, err := h.Write(append(leftBytes, rightBytes...)); err != nil {
-					return false, err
-				}
-				if bytes.Compare(h.Sum(nil), currentParent.Hash) != 0 {
+				res := solsha3.SoliditySHA3(append(leftBytes, rightBytes...))
+				if bytes.Compare(res, currentParent.Hash) != 0 {
 					return false, nil
 				}
 				currentParent = currentParent.Parent
