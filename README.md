@@ -33,54 +33,56 @@ import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
-//TestContent implements the Content interface provided by merkletree and represents the content stored in the tree.
-type TestContent struct {
+//Leaves implements the Content interface provided by merkletree and represents the content stored in the tree.
+type Leaves struct {
 	x string
 }
 
 //CalculateHash hashes the values of a TestContent
-func (t TestContent) CalculateHash() ([]byte, error) {
-	res := solsha3.SoliditySHA3(t.x)
+func (lv Leaves) CalculateHash() ([]byte, error) {
+	res := solsha3.SoliditySHA3(lv.x)
 	return res, nil
 }
 
 //Equals tests for equality of two Contents
-func (t TestContent) Equals(other Content) (bool, error) {
-	return t.x == other.(TestContent).x, nil
+func (lv Leaves) Equals(other Content) (bool, error) {
+	return lv.x == other.(Leaves).x, nil
 }
 
 func main() {
 	//Build list of Content to build tree
-	var list []Content
-	list = append(list, TestContent{x: "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"})
-	list = append(list, TestContent{x: "0xd3dE9c47b917baAd93F68B2c0D6dEe857D20b015"})
-	list = append(list, TestContent{x: "0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483"})
+	var leavess []Content
+	leavess = append(
+		leavess,
+		Leaves{x: "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"},
+		Leaves{x: "0xd3dE9c47b917baAd93F68B2c0D6dEe857D20b015"},
+		Leaves{x: "0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483"})
 	//Create a new Merkle Tree from the list of Content
-	tree, err := NewTree(list)
+	tree, err := NewMerkleTree(leavess)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	//Get the Merkle Root of the tree
-	merkleRoot := tree.MerkleRoot()
+	merkleRoot := tree.GetMerkleRoot()
 	fmt.Println(common.Bytes2Hex(merkleRoot))
 
 	//Verify the entire tree (hashes for each node) is valid
-	vt, err := tree.VerifyTree()
+	vt, err := tree.VerifyMerkleTree()
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println("Verify Tree: ", vt)
 
 	//Verify a specific content in in the tree
-	vc, err := tree.VerifyContent(list[0])
+	vc, err := tree.VerifyContent(leavess[0])
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println("Verify Content: ", vc)
 
 	// Get leave
-	tmp, _, _ := tree.GetMerklePath(list[0])
+	tmp, _ := tree.GetMerkleProof(leavess[0])
 	proof := make([]string, 0)
 	for _, v := range tmp {
 		proof = append(proof, common.Bytes2Hex(v))
@@ -88,7 +90,6 @@ func main() {
 	fmt.Println(proof)
 
 }
-
 
 ```
 
