@@ -31,68 +31,69 @@ Below is an example that makes use of the entire API - its quite small.
 package main
 
 import (
-  "crypto/sha256"
-  "log"
+	"fmt"
+	"log"
 
-  "github.com/cbergoon/merkletree"
+	"github.com/ethereum/go-ethereum/common"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
 //TestContent implements the Content interface provided by merkletree and represents the content stored in the tree.
 type TestContent struct {
-  x string
+	x string
 }
 
 //CalculateHash hashes the values of a TestContent
 func (t TestContent) CalculateHash() ([]byte, error) {
-  h := sha256.New()
-  if _, err := h.Write([]byte(t.x)); err != nil {
-    return nil, err
-  }
-
-  return h.Sum(nil), nil
+	res := solsha3.SoliditySHA3(t.x)
+	return res, nil
 }
 
 //Equals tests for equality of two Contents
-func (t TestContent) Equals(other merkletree.Content) (bool, error) {
-  return t.x == other.(TestContent).x, nil
+func (t TestContent) Equals(other Content) (bool, error) {
+	return t.x == other.(TestContent).x, nil
 }
 
 func main() {
-  //Build list of Content to build tree
-  var list []merkletree.Content
-  list = append(list, TestContent{x: "Hello"})
-  list = append(list, TestContent{x: "Hi"})
-  list = append(list, TestContent{x: "Hey"})
-  list = append(list, TestContent{x: "Hola"})
+	//Build list of Content to build tree
+	var list []Content
+	list = append(list, TestContent{x: "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"})
+	list = append(list, TestContent{x: "0xd3dE9c47b917baAd93F68B2c0D6dEe857D20b015"})
+	list = append(list, TestContent{x: "0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483"})
+	//Create a new Merkle Tree from the list of Content
+	tree, err := NewTree(list)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  //Create a new Merkle Tree from the list of Content
-  t, err := merkletree.NewTree(list)
-  if err != nil {
-    log.Fatal(err)
-  }
+	//Get the Merkle Root of the tree
+	merkleRoot := tree.MerkleRoot()
+	fmt.Println(common.Bytes2Hex(merkleRoot))
 
-  //Get the Merkle Root of the tree
-  mr := t.MerkleRoot()
-  log.Println(mr)
+	//Verify the entire tree (hashes for each node) is valid
+	vt, err := tree.VerifyTree()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Verify Tree: ", vt)
 
-  //Verify the entire tree (hashes for each node) is valid
-  vt, err := t.VerifyTree()
-  if err != nil {
-    log.Fatal(err)
-  }
-  log.Println("Verify Tree: ", vt)
+	//Verify a specific content in in the tree
+	vc, err := tree.VerifyContent(list[0])
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Verify Content: ", vc)
 
-  //Verify a specific content in in the tree
-  vc, err := t.VerifyContent(list[0])
-  if err != nil {
-    log.Fatal(err)
-  }
+	// Get leave
+	tmp, _, _ := tree.GetMerklePath(list[0])
+	proof := make([]string, 0)
+	for _, v := range tmp {
+		proof = append(proof, common.Bytes2Hex(v))
+	}
+	fmt.Println(proof)
 
-  log.Println("Verify Content: ", vc)
-
-  //String representation
-  log.Println(t)
 }
+
 
 ```
 #### Sample
