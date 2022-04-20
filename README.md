@@ -17,7 +17,7 @@ of the tree. The benefit of the tree structure is verifying any single content e
 nlog2(n) steps in the worst case.
 
 #### Sample
-![merkletree](merkle_tree.png)
+![merkletree](merkle.png)
 
 #### Install
 ```
