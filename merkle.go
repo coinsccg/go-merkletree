@@ -55,6 +55,9 @@ func (n *Node) verifyNode() ([]byte, error) {
 	}
 
 	hash := solsha3.SoliditySHA3(append(leftBytes, rightBytes...))
+	if n.Parent == nil {
+		hash = solsha3.SoliditySHA3(append(rightBytes, leftBytes...))
+	}
 	return hash, nil
 }
 
@@ -231,14 +234,13 @@ func (m *MerkleTree) VerifyMerkleTree() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
 	if bytes.Compare(m.merkleRoot, calculatedMerkleRoot) == 0 {
 		return true, nil
 	}
 	return false, nil
 }
 
-//VerifyProof indicates whether a given content is in the tree and the hashes are valid for that content.
+//VerifyContent indicates whether a given content is in the tree and the hashes are valid for that content.
 //Returns true if the expected Merkle Root is equivalent to the Merkle root calculated on the critical path
 //for a given content. Returns true if valid and false otherwise.
 func (m *MerkleTree) VerifyProof(content Content) (bool, error) {
@@ -250,17 +252,9 @@ func (m *MerkleTree) VerifyProof(content Content) (bool, error) {
 
 		if ok {
 			currentParent := l.Parent
-			for currentParent != nil {
-				rightBytes, err := currentParent.Right.calculateNodeHash()
-				if err != nil {
-					return false, err
-				}
-
-				leftBytes, err := currentParent.Left.calculateNodeHash()
-				if err != nil {
-					return false, err
-				}
-
+			for currentParent.Parent != nil {
+				rightBytes := currentParent.Right.Hash
+				leftBytes := currentParent.Left.Hash
 				hash := solsha3.SoliditySHA3(append(leftBytes, rightBytes...))
 				if bytes.Compare(hash, currentParent.Hash) != 0 {
 					return false, nil
