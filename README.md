@@ -84,7 +84,7 @@ func main() {
 	log.Println("Verify Tree: ", vt)
 
 	//Verify a specific content in in the tree
-	vc, err := tree.VerifyContent(leavess[0])
+	vc, err := tree.VerifyProof(leavess[0])
 	if err != nil {
 		log.Fatal(err)
 	}
