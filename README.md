@@ -35,8 +35,8 @@ import (
 
 //Leaves implements the Content interface provided by merkletree and represents the content stored in the tree.
 type Leaves struct {
-	params []interface{}
 	types  []string
+	params []interface{}
 }
 
 //CalculateHash hashes the values of a TestContent
