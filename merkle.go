@@ -68,8 +68,8 @@ func (n *Node) calculateNodeHash() ([]byte, error) {
 	return hash, nil
 }
 
-//NewTree creates a new Merkle Tree using the content cs.
-func NewTree(cs []Content) (*MerkleTree, error) {
+//NewMerkleTree creates a new Merkle Tree using the content cs.
+func NewMerkleTree(cs []Content) (*MerkleTree, error) {
 	t := &MerkleTree{}
 	root, leafs, err := buildWithContent(cs, t)
 	if err != nil {
@@ -96,34 +96,31 @@ func NewTreeWithHashStrategy(cs []Content) (*MerkleTree, error) {
 	return t, nil
 }
 
-// GetMerklePath: Get Merkle path and indexes(left leaf or right leaf)
-func (m *MerkleTree) GetMerklePath(content Content) ([][]byte, []int64, error) {
+// GetMerkleProof: Get Merkle path and indexes(left leaf or right leaf)
+func (m *MerkleTree) GetMerkleProof(content Content) ([][]byte, error) {
 	for _, current := range m.Leafs {
 		ok, err := current.C.Equals(content)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		if ok {
 			currentParent := current.Parent
 			var merklePath [][]byte
-			var index []int64
 			//merklePath = append(merklePath, currentParent.Left.Hash, currentParent.Right.Hash)
 			for currentParent != nil {
 				if bytes.Equal(currentParent.Left.Hash, current.Hash) {
 					merklePath = append(merklePath, currentParent.Right.Hash)
-					index = append(index, 1) // right leaf
 				} else {
 					merklePath = append(merklePath, currentParent.Left.Hash)
-					index = append(index, 0) // left leaf
 				}
 				current = currentParent
 				currentParent = currentParent.Parent
 			}
-			return merklePath, index, nil
+			return merklePath, nil
 		}
 	}
-	return nil, nil, nil
+	return nil, nil
 }
 
 //buildWithContent is a helper function that for a given set of Contents, generates a
@@ -139,7 +136,6 @@ func buildWithContent(cs []Content, t *MerkleTree) (*Node, []*Node, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-
 		leafs = append(leafs, &Node{
 			Hash: hash,
 			C:    c,
@@ -192,8 +188,8 @@ func buildIntermediate(nl []*Node, t *MerkleTree) (*Node, error) {
 	return buildIntermediate(nodes, t)
 }
 
-//MerkleRoot returns the unverified Merkle Root (hash of the root node) of the tree.
-func (m *MerkleTree) MerkleRoot() []byte {
+//GetMerkleRoot returns the unverified Merkle Root (hash of the root node) of the tree.
+func (m *MerkleTree) GetMerkleRoot() []byte {
 	return m.merkleRoot
 }
 
@@ -228,9 +224,9 @@ func (m *MerkleTree) RebuildTreeWith(cs []Content) error {
 	return nil
 }
 
-//VerifyTree verify tree validates the hashes at each level of the tree and returns true if the
+//VerifyMerkleTree verify tree validates the hashes at each level of the tree and returns true if the
 //resulting hash at the root of the tree matches the resulting root hash; returns false otherwise.
-func (m *MerkleTree) VerifyTree() (bool, error) {
+func (m *MerkleTree) VerifyMerkleTree() (bool, error) {
 	calculatedMerkleRoot, err := m.Root.verifyNode()
 	if err != nil {
 		return false, err
