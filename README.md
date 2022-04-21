@@ -35,23 +35,23 @@ import (
 
 //Leaves implements the Content interface provided by merkletree and represents the content stored in the tree.
 type Leaves struct {
-	x []interface{}
+	params []interface{}
+	types  []string
 }
 
 //CalculateHash hashes the values of a TestContent
 func (lv Leaves) CalculateHash() ([]byte, error) {
-	types := []string{"address", "uint256"}
-	res := solsha3.SoliditySHA3(types, lv.x)
+	res := solsha3.SoliditySHA3(lv.types, lv.params)
 	return res, nil
 }
 
 //Equals tests for equality of two Contents
 func (lv Leaves) Equals(other Content) (bool, error) {
-	if len(lv.x) != len(other.(Leaves).x) {
+	if len(lv.params) != len(other.(Leaves).params) {
 		return false, nil
 	}
-	for k, v := range other.(Leaves).x {
-		if v != lv.x[k] {
+	for k, v := range other.(Leaves).params {
+		if v != lv.params[k] {
 			return false, nil
 		}
 	}
@@ -60,12 +60,16 @@ func (lv Leaves) Equals(other Content) (bool, error) {
 
 func main() {
 	//Build list of Content to build tree
-	var leavess []Content
+	var (
+		leavess []Content
+		types   = []string{"address", "uint256"}
+	)
 	leavess = append(
 		leavess,
-		Leaves{x: []interface{}{"0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "1000"}},
-		Leaves{x: []interface{}{"0xd3dE9c47b917baAd93F68B2c0D6dEe857D20b015", "1000"}},
-		Leaves{x: []interface{}{"0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483", "1000"}})
+		Leaves{types: types, params: []interface{}{"0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "1000"}},
+		Leaves{types: types, params: []interface{}{"0xd3dE9c47b917baAd93F68B2c0D6dEe857D20b015", "1000"}},
+		Leaves{types: types, params: []interface{}{"0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483", "1000"}},
+	)
 	//Create a new Merkle Tree from the list of Content
 	tree, err := NewMerkleTree(leavess)
 	if err != nil {
@@ -99,6 +103,7 @@ func main() {
 	fmt.Println(proof)
 
 }
+
 ```
 
 #### License
