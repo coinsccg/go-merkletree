@@ -27,34 +27,38 @@ package main
 
 import (
 	"fmt"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	"golang.org/x/crypto/sha3"
 	"log"
+	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
-//Leaves implements the Content interface provided by merkletree and represents the content stored in the tree.
+// Leaves implements the Content interface provided by merkletree and represents the content stored in the tree.
 type Leaves struct {
 	types  []string
 	params []interface{}
 }
 
-//CalculateHash hashes the values of a TestContent
+// CalculateHash hashes the values of a TestContent
 func (lv Leaves) CalculateHash() ([]byte, error) {
+
 	res := solsha3.SoliditySHA3(lv.types, lv.params)
+
 	return res, nil
 }
 
-//Equals tests for equality of two Contents
+// Equals tests for equality of two Contents
 func (lv Leaves) Equals(other Content) (bool, error) {
 	if len(lv.params) != len(other.(Leaves).params) {
 		return false, nil
 	}
-	for k, v := range other.(Leaves).params {
-		if v != lv.params[k] {
-			return false, nil
-		}
-	}
+	//for k, v := range other.(Leaves).params {
+	//	if v != lv.params[k] {
+	//		return false, nil
+	//	}
+	//}
 	return true, nil
 }
 
@@ -62,46 +66,47 @@ func main() {
 	//Build list of Content to build tree
 	var (
 		leavess []Content
-		types   = []string{"address", "uint256"}
+		types   = []string{"uint256", "address", "uint256"}
 	)
+
 	leavess = append(
 		leavess,
-		Leaves{types: types, params: []interface{}{"0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "1000"}},
-		Leaves{types: types, params: []interface{}{"0xd3dE9c47b917baAd93F68B2c0D6dEe857D20b015", "1000"}},
-		Leaves{types: types, params: []interface{}{"0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483", "1000"}},
+		Leaves{types: types, params: []interface{}{"439815793", "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "1000"}},
+		Leaves{types: types, params: []interface{}{"55", "0xd3dE9c47b917baAd93F68B2c0D6dEe857D20b015", "1000"}},
+		Leaves{types: types, params: []interface{}{"55", "0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483", "1000"}},
+		Leaves{types: types, params: []interface{}{"55", "0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483", "1000"}},
 	)
+	//0x290324377ec1342266f5f994d8e8441ecec36a32b4be1cd7d71174b388c24714
 	//Create a new Merkle Tree from the list of Content
-	tree, err := NewMerkleTree(leavess)
+	tree, err := NewTreeWithHashStrategy(leavess, sha3.NewLegacyKeccak256)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	//Get the Merkle Root of the tree
-	merkleRoot := tree.GetMerkleRoot()
-	fmt.Println(common.Bytes2Hex(merkleRoot))
-
+	merkleRoot := tree.MerkleRoot()
+	fmt.Println(fmt.Sprintf("0x%s", common.Bytes2Hex(merkleRoot)))
 	//Verify the entire tree (hashes for each node) is valid
-	vt, err := tree.VerifyMerkleTree()
+	vt, err := tree.VerifyTree()
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println("Verify Tree: ", vt)
 
 	//Verify a specific content in in the tree
-	vc, err := tree.VerifyProof(leavess[0])
+	vc, err := tree.VerifyContent(leavess[0])
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println("Verify Content: ", vc)
 
 	// Get leave
-	tmp, _ := tree.GetMerkleProof(leavess[0])
+	tmp, _, _ := tree.GetMerklePath(leavess[0])
 	proof := make([]string, 0)
 	for _, v := range tmp {
-		proof = append(proof, common.Bytes2Hex(v))
+		proof = append(proof, fmt.Sprintf("0x%s", common.Bytes2Hex(v)))
 	}
 	fmt.Println(proof)
-
 }
 
 ```
