@@ -26,11 +26,9 @@ Below is an example that makes use of the entire API - its quite small.
 package main
 
 import (
-	"fmt"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"golang.org/x/crypto/sha3"
 	"log"
-	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -76,37 +74,33 @@ func main() {
 		Leaves{types: types, params: []interface{}{"55", "0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483", "1000"}},
 		Leaves{types: types, params: []interface{}{"55", "0x7cD1CB03FAE64CBab525C3263DBeB821Afd64483", "1000"}},
 	)
-	//0x290324377ec1342266f5f994d8e8441ecec36a32b4be1cd7d71174b388c24714
-	//Create a new Merkle Tree from the list of Content
-	tree, err := NewTreeWithHashStrategy(leavess, sha3.NewLegacyKeccak256)
+	tree, err := NewTreeWithHashStrategy(leaves, sha3.NewLegacyKeccak256)
 	if err != nil {
-		log.Fatal(err)
+		return merkleRoot, "", err
 	}
 
-	//Get the Merkle Root of the tree
-	merkleRoot := tree.MerkleRoot()
-	fmt.Println(fmt.Sprintf("0x%s", common.Bytes2Hex(merkleRoot)))
-	//Verify the entire tree (hashes for each node) is valid
-	vt, err := tree.VerifyTree()
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Verify Tree: ", vt)
+	// 计算根hash
+	merkleRoot = fmt.Sprintf("0x%s", common.Bytes2Hex(tree.MerkleRoot()))
 
-	//Verify a specific content in in the tree
-	vc, err := tree.VerifyContent(leavess[0])
+	_, err = tree.VerifyMerkleTree()
 	if err != nil {
-		log.Fatal(err)
+		return merkleRoot, "", err
 	}
-	log.Println("Verify Content: ", vc)
 
-	// Get leave
-	tmp, _, _ := tree.GetMerklePath(leavess[0])
-	proof := make([]string, 0)
-	for _, v := range tmp {
-		proof = append(proof, fmt.Sprintf("0x%s", common.Bytes2Hex(v)))
+	_, err = tree.VerifyProof(leaves[0])
+	if err != nil {
+		return merkleRoot, "", err
 	}
-	fmt.Println(proof)
+
+	merkleProofBytes, _, err := tree.MerkleProof(leaves[0])
+	if err != nil {
+		return merkleRoot, "", err
+	}
+
+	// 计算proof
+	for _, v := range merkleProofBytes {
+		merkleProof = append(merkleProof, fmt.Sprintf("0x%s", common.Bytes2Hex(v)))
+	}
 }
 
 ```
