@@ -41,10 +41,7 @@ type Leaves struct {
 
 // CalculateHash hashes the values of a TestContent
 func (lv Leaves) CalculateHash() ([]byte, error) {
-
-	res := solsha3.SoliditySHA3(lv.types, lv.params)
-
-	return res, nil
+	return solsha3.SoliditySHA3(lv.types, lv.params), nil
 }
 
 // Equals tests for equality of two Contents
@@ -52,11 +49,6 @@ func (lv Leaves) Equals(other Content) (bool, error) {
 	if len(lv.params) != len(other.(Leaves).params) {
 		return false, nil
 	}
-	//for k, v := range other.(Leaves).params {
-	//	if v != lv.params[k] {
-	//		return false, nil
-	//	}
-	//}
 	return true, nil
 }
 
